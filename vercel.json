@@ -1,0 +1,8 @@
+{
+  "crons": [
+    {
+      "path": "/api/internal/cleanup-expired-reservations",
+      "schedule": "*/1 * * * *"
+    }
+  ]
+}

@@ -1,0 +1,96 @@
+// Prisma Schema for Inventory Reservation System
+// Supports PostgreSQL with Supabase/Neon compatibility
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+// ─── Enums ─────────────────────────────────────────────
+
+enum ReservationStatus {
+  PENDING
+  CONFIRMED
+  RELEASED
+}
+
+// ─── Models ────────────────────────────────────────────
+
+model Product {
+  id          String        @id @default(cuid())
+  name        String
+  description String?
+  price       Float         @default(0)
+  imageUrl    String?
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  inventory    Inventory[]
+  reservations Reservation[]
+
+  @@map("products")
+}
+
+model Warehouse {
+  id        String   @id @default(cuid())
+  name      String
+  location  String
+  createdAt DateTime @default(now())
+
+  inventory    Inventory[]
+  reservations Reservation[]
+
+  @@map("warehouses")
+}
+
+model Inventory {
+  id            String   @id @default(cuid())
+  productId     String
+  warehouseId   String
+  totalUnits    Int      @default(0)
+  reservedUnits Int      @default(0)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  product   Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
+  warehouse Warehouse @relation(fields: [warehouseId], references: [id], onDelete: Cascade)
+
+  @@unique([productId, warehouseId])
+  @@map("inventories")
+}
+
+model Reservation {
+  id          String            @id @default(cuid())
+  productId   String
+  warehouseId String
+  quantity    Int
+  status      ReservationStatus @default(PENDING)
+  expiresAt   DateTime
+  confirmedAt DateTime?
+  releasedAt  DateTime?
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+
+  product   Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
+  warehouse Warehouse @relation(fields: [warehouseId], references: [id], onDelete: Cascade)
+
+  @@index([status, expiresAt])
+  @@index([productId, warehouseId])
+  @@map("reservations")
+}
+
+model IdempotencyKey {
+  id          String   @id @default(cuid())
+  key         String   @unique
+  requestHash String
+  response    String   @db.Text
+  statusCode  Int
+  createdAt   DateTime @default(now())
+
+  @@map("idempotency_keys")
+}
